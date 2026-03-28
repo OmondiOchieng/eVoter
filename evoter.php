@@ -1,4 +1,3 @@
-
 <?php
 require_once("dbconnector.php");
 require_once("sms.php");
@@ -21,14 +20,13 @@ if ($row && $row['has_voted'] == 1) {
     exit;
 }
 
-/* ---------------- FLOW START ---------------- */
-
+/* ---------------- START ---------------- */
 if ($text == "") {
     echo "CON Welcome to SmartVote\nEnter Full Name:";
     exit;
 }
 
-/* NAME */
+/* ---------------- NAME ---------------- */
 if (count($level) == 1) {
 
     $name = $level[0];
@@ -44,7 +42,7 @@ if (count($level) == 1) {
     exit;
 }
 
-/* ID NUMBER */
+/* ---------------- ID ---------------- */
 if (count($level) == 2) {
 
     $id = $level[1];
@@ -57,7 +55,7 @@ if (count($level) == 2) {
     exit;
 }
 
-/* POLLING STATION + CONSTITUENCY MAPPING */
+/* ---------------- POLLING STATION ---------------- */
 if (count($level) == 3) {
 
     $station = $level[2];
@@ -66,21 +64,67 @@ if (count($level) == 3) {
     $stmt->bind_param("ss", $station, $phoneNumber);
     $stmt->execute();
 
-    // GET CONSTITUENCY + WARD
-    $stmt = $conn->prepare("SELECT constituency, ward FROM polling_stations WHERE station_name=?");
+    // GET constituency, ward, county
+    $stmt = $conn->prepare("SELECT constituency, ward, county FROM polling_stations WHERE station_name=?");
     $stmt->bind_param("s", $station);
     $stmt->execute();
     $data = $stmt->get_result()->fetch_assoc();
 
+    if (!$data) {
+        echo "END Invalid polling station.";
+        exit;
+    }
+
     $constituency = $data['constituency'];
     $ward = $data['ward'];
+    $county = $data['county'];
 
-    // SAVE
-    $stmt = $conn->prepare("UPDATE voters SET constituency=?, ward=? WHERE phone_number=?");
-    $stmt->bind_param("sss", $constituency, $ward, $phoneNumber);
+    // SAVE ALL
+    $stmt = $conn->prepare("UPDATE voters SET constituency=?, ward=?, county=? WHERE phone_number=?");
+    $stmt->bind_param("ssss", $constituency, $ward, $county, $phoneNumber);
     $stmt->execute();
 
-    // LOAD MP
+    // PRESIDENT (GLOBAL)
+    $res = $conn->query("SELECT candidate_name FROM president_candidates LIMIT 3");
+
+    $response = "CON President:\n";
+    $i = 1;
+    while ($row = $res->fetch_assoc()) {
+        $response .= $i . ". " . $row['candidate_name'] . "\n";
+        $i++;
+    }
+
+    echo $response;
+    exit;
+}
+
+/* ---------------- PRESIDENT ---------------- */
+if (count($level) == 4) {
+
+    saveVote($conn, $phoneNumber, "President", $level[3]);
+
+    $county = getUser($conn, $phoneNumber, "county");
+
+    $res = $conn->query("SELECT candidate_name FROM governor_candidates WHERE county='$county' LIMIT 3");
+
+    $response = "CON Governor ($county):\n";
+    $i = 1;
+    while ($row = $res->fetch_assoc()) {
+        $response .= $i . ". " . $row['candidate_name'] . "\n";
+        $i++;
+    }
+
+    echo $response;
+    exit;
+}
+
+/* ---------------- GOVERNOR ---------------- */
+if (count($level) == 5) {
+
+    saveVote($conn, $phoneNumber, "Governor", $level[4]);
+
+    $constituency = getUser($conn, $phoneNumber, "constituency");
+
     $res = $conn->query("SELECT candidate_name FROM mp_candidates WHERE constituency='$constituency'");
 
     $response = "CON MP Candidates ($constituency):\n";
@@ -94,10 +138,10 @@ if (count($level) == 3) {
     exit;
 }
 
-/* MP VOTE */
-if (count($level) == 4) {
+/* ---------------- MP ---------------- */
+if (count($level) == 6) {
 
-    saveVote($conn, $phoneNumber, "MP", $level[3]);
+    saveVote($conn, $phoneNumber, "MP", $level[5]);
 
     $constituency = getUser($conn, $phoneNumber, "constituency");
 
@@ -114,10 +158,10 @@ if (count($level) == 4) {
     exit;
 }
 
-/* WOMEN REP */
-if (count($level) == 5) {
+/* ---------------- WOMEN REP ---------------- */
+if (count($level) == 7) {
 
-    saveVote($conn, $phoneNumber, "Women Rep", $level[4]);
+    saveVote($conn, $phoneNumber, "Women Rep", $level[6]);
 
     $ward = getUser($conn, $phoneNumber, "ward");
 
@@ -134,12 +178,12 @@ if (count($level) == 5) {
     exit;
 }
 
-/* MCA + FINAL VOTE */
-if (count($level) == 6) {
+/* ---------------- MCA + FINAL ---------------- */
+if (count($level) == 8) {
 
-    saveVote($conn, $phoneNumber, "MCA", $level[5]);
+    saveVote($conn, $phoneNumber, "MCA", $level[7]);
 
-    $voteCode = "RK" . rand(100000, 999999);
+    $voteCode = "SV" . rand(100000, 999999);
 
     $stmt = $conn->prepare("UPDATE voters SET has_voted=1, vote_code=? WHERE phone_number=?");
     $stmt->bind_param("ss", $voteCode, $phoneNumber);
@@ -156,13 +200,6 @@ if (count($level) == 6) {
 /* ---------------- FUNCTIONS ---------------- */
 
 function saveVote($conn, $phone, $position, $choice) {
-
-    $candidates = [
-        "MP" => ["Auto"],
-        "Women Rep" => ["Auto"],
-        "MCA" => ["Auto"]
-    ];
-
     $stmt = $conn->prepare("INSERT INTO votes (phone_number, position, candidate) VALUES (?, ?, ?)");
     $stmt->bind_param("sss", $phone, $position, $choice);
     $stmt->execute();
