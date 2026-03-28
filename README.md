@@ -243,20 +243,9 @@ cURL (API communication)
 
 👨‍💻 AUTHOR
 
-Built as a secure civic-tech solution for digital voting innovation.
+Acacia Solutions built as a secure civic-tech solution for digital voting innovation.
 
 
 ---
 
-If you want next level 🔥 I can also:
 
-Design a GitHub banner image
-
-Create a live demo pitch script (for judges)
-
-Build a React admin dashboard for results
-
-Package it into a deployable hosting setup (cPanel ready)
-
-
-Just say 👍
