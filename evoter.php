@@ -64,7 +64,7 @@ if (count($level) == 3) {
     $stmt->bind_param("ss", $station, $phoneNumber);
     $stmt->execute();
 
-    // GET constituency, ward, county
+    // Fetch mapping
     $stmt = $conn->prepare("SELECT constituency, ward, county FROM polling_stations WHERE station_name=?");
     $stmt->bind_param("s", $station);
     $stmt->execute();
@@ -79,12 +79,12 @@ if (count($level) == 3) {
     $ward = $data['ward'];
     $county = $data['county'];
 
-    // SAVE ALL
+    // Save mapping
     $stmt = $conn->prepare("UPDATE voters SET constituency=?, ward=?, county=? WHERE phone_number=?");
     $stmt->bind_param("ssss", $constituency, $ward, $county, $phoneNumber);
     $stmt->execute();
 
-    // PRESIDENT (GLOBAL)
+    // President
     $res = $conn->query("SELECT candidate_name FROM president_candidates LIMIT 3");
 
     $response = "CON President:\n";
@@ -127,7 +127,7 @@ if (count($level) == 5) {
 
     $res = $conn->query("SELECT candidate_name FROM mp_candidates WHERE constituency='$constituency'");
 
-    $response = "CON MP Candidates ($constituency):\n";
+    $response = "CON MP ($constituency):\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
         $response .= $i . ". " . $row['candidate_name'] . "\n";
@@ -167,7 +167,7 @@ if (count($level) == 7) {
 
     $res = $conn->query("SELECT candidate_name FROM mca_candidates WHERE ward='$ward'");
 
-    $response = "CON MCA Candidates:\n";
+    $response = "CON MCA:\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
         $response .= $i . ". " . $row['candidate_name'] . "\n";
@@ -178,7 +178,7 @@ if (count($level) == 7) {
     exit;
 }
 
-/* ---------------- MCA + FINAL ---------------- */
+/* ---------------- FINAL ---------------- */
 if (count($level) == 8) {
 
     saveVote($conn, $phoneNumber, "MCA", $level[7]);
