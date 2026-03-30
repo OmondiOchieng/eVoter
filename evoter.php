@@ -2,6 +2,7 @@
 require_once("dbconnector.php");
 require_once("sms.php");
 
+/* ---------------- RECEIVE USSD ---------------- */
 $phoneNumber = $_POST["phoneNumber"];
 $text = $_POST["text"];
 
@@ -22,20 +23,18 @@ if ($row && $row['has_voted'] == 1) {
 
 /* ---------------- START ---------------- */
 if ($text == "") {
-    echo "CON Welcome to eVoter\nEnter Full Name:";
+    echo "CON Welcome to eVoter (*21366#)\nEnter Full Name:";
     exit;
 }
 
 /* ---------------- NAME ---------------- */
 if (count($level) == 1) {
 
-    $name = $level[0];
-
     $stmt = $conn->prepare("INSERT INTO voters (phone_number, full_name) 
     VALUES (?, ?) 
     ON DUPLICATE KEY UPDATE full_name=VALUES(full_name)");
 
-    $stmt->bind_param("ss", $phoneNumber, $name);
+    $stmt->bind_param("ss", $phoneNumber, $level[0]);
     $stmt->execute();
 
     echo "CON Enter ID Number:";
@@ -45,10 +44,8 @@ if (count($level) == 1) {
 /* ---------------- ID ---------------- */
 if (count($level) == 2) {
 
-    $id = $level[1];
-
     $stmt = $conn->prepare("UPDATE voters SET id_number=? WHERE phone_number=?");
-    $stmt->bind_param("ss", $id, $phoneNumber);
+    $stmt->bind_param("ss", $level[1], $phoneNumber);
     $stmt->execute();
 
     echo "CON Enter Polling Station:";
@@ -64,7 +61,6 @@ if (count($level) == 3) {
     $stmt->bind_param("ss", $station, $phoneNumber);
     $stmt->execute();
 
-    // Fetch mapping
     $stmt = $conn->prepare("SELECT constituency, ward, county FROM polling_stations WHERE station_name=?");
     $stmt->bind_param("s", $station);
     $stmt->execute();
@@ -75,23 +71,16 @@ if (count($level) == 3) {
         exit;
     }
 
-    $constituency = $data['constituency'];
-    $ward = $data['ward'];
-    $county = $data['county'];
-
-    // Save mapping
     $stmt = $conn->prepare("UPDATE voters SET constituency=?, ward=?, county=? WHERE phone_number=?");
-    $stmt->bind_param("ssss", $constituency, $ward, $county, $phoneNumber);
+    $stmt->bind_param("ssss", $data['constituency'], $data['ward'], $data['county'], $phoneNumber);
     $stmt->execute();
 
-    // President
     $res = $conn->query("SELECT candidate_name FROM president_candidates LIMIT 3");
 
     $response = "CON President:\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
-        $response .= $i . ". " . $row['candidate_name'] . "\n";
-        $i++;
+        $response .= $i++ . ". " . $row['candidate_name'] . "\n";
     }
 
     echo $response;
@@ -110,8 +99,7 @@ if (count($level) == 4) {
     $response = "CON Governor ($county):\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
-        $response .= $i . ". " . $row['candidate_name'] . "\n";
-        $i++;
+        $response .= $i++ . ". " . $row['candidate_name'] . "\n";
     }
 
     echo $response;
@@ -130,8 +118,7 @@ if (count($level) == 5) {
     $response = "CON MP ($constituency):\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
-        $response .= $i . ". " . $row['candidate_name'] . "\n";
-        $i++;
+        $response .= $i++ . ". " . $row['candidate_name'] . "\n";
     }
 
     echo $response;
@@ -150,8 +137,7 @@ if (count($level) == 6) {
     $response = "CON Women Rep:\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
-        $response .= $i . ". " . $row['candidate_name'] . "\n";
-        $i++;
+        $response .= $i++ . ". " . $row['candidate_name'] . "\n";
     }
 
     echo $response;
@@ -170,8 +156,7 @@ if (count($level) == 7) {
     $response = "CON MCA:\n";
     $i = 1;
     while ($row = $res->fetch_assoc()) {
-        $response .= $i . ". " . $row['candidate_name'] . "\n";
-        $i++;
+        $response .= $i++ . ". " . $row['candidate_name'] . "\n";
     }
 
     echo $response;
@@ -185,15 +170,22 @@ if (count($level) == 8) {
 
     $voteCode = "SV" . rand(100000, 999999);
 
-    $stmt = $conn->prepare("UPDATE voters SET has_voted=1, vote_code=? WHERE phone_number=?");
-    $stmt->bind_param("ss", $voteCode, $phoneNumber);
+    // DATE & TIME
+    date_default_timezone_set("Africa/Nairobi");
+    $date = date("Y-m-d");
+    $time = date("H:i:s");
+
+    $stmt = $conn->prepare("UPDATE voters SET has_voted=1, vote_code=?, vote_date=?, vote_time=? WHERE phone_number=?");
+    $stmt->bind_param("ssss", $voteCode, $date, $time, $phoneNumber);
     $stmt->execute();
 
     $name = getUser($conn, $phoneNumber, "full_name");
 
-    sendSMS($phoneNumber, "Hi $name, you voted successfully. Code: $voteCode");
+    // SMS
+    $message = "eVoter (*21366#)\nVote Casted Successfully\nCode: $voteCode\nDate: $date\nTime: $time";
+    sendSMS($phoneNumber, $message);
 
-    echo "END Voted Successfully\nCode: $voteCode";
+    echo "END Vote Casted Successfully\nCode: $voteCode\n$date $time";
     exit;
 }
 
