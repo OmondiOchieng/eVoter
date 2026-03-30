@@ -8,7 +8,7 @@ function sendSMS($phone, $message) {
     $data = [
         "phone_number" => $phone,
         "message" => $message,
-        "sender_id" => SMS_SENDER_ID
+        "sender_id" => "eVoter"
     ];
 
     $headers = [
