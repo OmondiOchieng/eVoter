@@ -22,7 +22,7 @@ if ($row && $row['has_voted'] == 1) {
 
 /* ---------------- START ---------------- */
 if ($text == "") {
-    echo "CON Welcome to SmartVote\nEnter Full Name:";
+    echo "CON Welcome to eVoter\nEnter Full Name:";
     exit;
 }
 
