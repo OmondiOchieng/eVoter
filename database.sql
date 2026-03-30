@@ -2,7 +2,7 @@ CREATE DATABASE voting_system;
 USE voting_system;
 
 -- ==============================
--- 1. VOTERS
+-- 1. VOTERS (FINAL)
 -- ==============================
 CREATE TABLE voters (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -12,11 +12,16 @@ CREATE TABLE voters (
     polling_station VARCHAR(150),
     ward VARCHAR(100),
     constituency VARCHAR(100),
-    county VARCHAR(100), -- ✅ NEW (important)
+    county VARCHAR(100),
+
     otp VARCHAR(10),
     is_verified TINYINT DEFAULT 0,
     has_voted TINYINT DEFAULT 0,
     vote_code VARCHAR(20),
+
+    -- ✅ FINAL TIMESTAMP FIELD
+    vote_timestamp DATETIME DEFAULT NULL,
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -28,27 +33,30 @@ CREATE TABLE votes (
     phone_number VARCHAR(20),
     position VARCHAR(50),
     candidate VARCHAR(100),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    UNIQUE (phone_number, position) -- ✅ prevents double voting per seat
+
+    -- prevents double voting per position
+    UNIQUE KEY unique_vote (phone_number, position)
 );
 
 -- ==============================
--- 3. POLLING STATIONS (UPDATED)
+-- 3. POLLING STATIONS
 -- ==============================
 CREATE TABLE polling_stations (
     id INT AUTO_INCREMENT PRIMARY KEY,
     station_name VARCHAR(150) UNIQUE,
     ward VARCHAR(100),
     constituency VARCHAR(100),
-    county VARCHAR(100) -- ✅ NEW
+    county VARCHAR(100)
 );
 
 -- ==============================
--- 4. PRESIDENT CANDIDATES (NEW)
+-- 4. PRESIDENT CANDIDATES
 -- ==============================
 CREATE TABLE president_candidates (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    candidate_name VARCHAR(100)
+    candidate_name VARCHAR(100) NOT NULL
 );
 
 INSERT INTO president_candidates (candidate_name) VALUES
@@ -57,7 +65,7 @@ INSERT INTO president_candidates (candidate_name) VALUES
 ('Candidate P3');
 
 -- ==============================
--- 5. GOVERNOR CANDIDATES (NEW)
+-- 5. GOVERNOR CANDIDATES
 -- ==============================
 CREATE TABLE governor_candidates (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -80,7 +88,7 @@ CREATE TABLE mp_candidates (
 );
 
 -- ==============================
--- 7. WOMEN REP
+-- 7. WOMEN REP CANDIDATES
 -- ==============================
 CREATE TABLE women_rep_candidates (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -89,7 +97,7 @@ CREATE TABLE women_rep_candidates (
 );
 
 -- ==============================
--- 8. MCA
+-- 8. MCA CANDIDATES
 -- ==============================
 CREATE TABLE mca_candidates (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -100,13 +108,13 @@ CREATE TABLE mca_candidates (
 -- ==============================
 -- 9. INDEXES (PERFORMANCE BOOST)
 -- ==============================
-CREATE INDEX idx_constituency_mp ON mp_candidates(constituency);
-CREATE INDEX idx_constituency_wr ON women_rep_candidates(constituency);
-CREATE INDEX idx_ward_mca ON mca_candidates(ward);
-CREATE INDEX idx_county_gov ON governor_candidates(county);
+CREATE INDEX idx_mp_constituency ON mp_candidates(constituency);
+CREATE INDEX idx_wr_constituency ON women_rep_candidates(constituency);
+CREATE INDEX idx_mca_ward ON mca_candidates(ward);
+CREATE INDEX idx_gov_county ON governor_candidates(county);
 
 -- ==============================
--- 10. SAMPLE POLLING DATA
+-- 10. SAMPLE POLLING STATIONS
 -- ==============================
 INSERT INTO polling_stations (station_name, ward, constituency, county) VALUES
 ('Kibra Primary School', 'Laini Saba', 'Kibra', 'Nairobi'),
